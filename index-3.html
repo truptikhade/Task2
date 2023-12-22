@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Viewer</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        select {
+            width: 150px;
+        }
+
+        button {
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Product Viewer</h2>
+
+    <div id="step1">
+        <h3>Step 1: Import JSON File</h3>
+        <label for="fileInput">Choose JSON File:</label>
+        <input type="file" id="fileInput" accept=".json" />
+        <button onclick="importData()">Import Data</button>
+    </div>
+
+    <div id="step2" style="display: none;">
+        <h3>Step 2: Specify Format</h3>
+        <label for="fileType">File Type:</label>
+        <select id="fileType">
+            <option value="json">JSON</option>
+        </select>
+        <br>
+        <label for="delimiter">Delimiter:</label>
+        <select id="delimiter">
+            <option value=",">Comma</option>
+            <option value=";">Semicolon</option>
+        </select>
+        <br>
+        <label for="characterEncoding">Character Encoding:</label>
+        <select id="characterEncoding">
+            <option value="UTF-8">UTF-8</option>
+        </select>
+        <br>
+        <label for="hasHeader">Has Header:</label>
+        <input type="checkbox" id="hasHeader" />
+        <br>
+        <button onclick="prevStep()">Previous</button>
+        <button onclick="nextStepToDisplay()">Next</button>
+    </div>
+
+    <div id="step3" style="display: none;">
+        <h3>Step 3: Display Handling</h3>
+        <label for="availableFields">Available Fields:</label>
+        <select id="availableFields" multiple></select>
+
+        <button onclick="addSelectedFields()">>></button>
+        <button onclick="removeSelectedFields()">&lt;&lt;</button>
+
+        <label for="displayedFields">Displayed Fields:</label>
+        <select id="displayedFields" multiple></select>
+        <br>
+        <button onclick="prevStep()">Previous</button>
+        <button onclick="displayData()">Display Data</button>
+    </div>
+
+    <table id="productTable">
+        <thead>
+        </thead>
+        <tbody>
+            <!-- Table content will be inserted here dynamically -->
+        </tbody>
+    </table>
+
+    <script>
+        let jsonData = null;
+
+        function importData() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+
+                reader.onload = function (e) {
+                    try {
+                        jsonData = JSON.parse(e.target.result);
+                        updateAvailableFields();
+                        nextStepToFormat();
+                    } catch (error) {
+                        console.error('Error parsing JSON:', error);
+                    }
+                };
+
+                reader.readAsText(file);
+            }
+        }
+
+        function nextStepToFormat() {
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+
+            step1.style.display = 'none';
+            step2.style.display = 'block';
+        }
+
+        function nextStepToDisplay() {
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+
+            step2.style.display = 'none';
+            step3.style.display = 'block';
+        }
+
+        function prevStep() {
+            const step1 = document.getElementById('step1');
+            const step2 = document.getElementById('step2');
+            const step3 = document.getElementById('step3');
+
+            step1.style.display = 'block';
+            step2.style.display = 'none';
+            step3.style.display = 'none';
+        }
+
+        function updateAvailableFields() {
+            const availableFieldsSelect = document.getElementById('availableFields');
+            availableFieldsSelect.innerHTML = '';
+
+            if (jsonData) {
+                const sampleProduct = Object.values(jsonData.products)[0];
+
+                for (const field in sampleProduct) {
+                    const option = document.createElement('option');
+                    option.value = field;
+                    option.text = field;
+                    availableFieldsSelect.appendChild(option);
+                }
+            }
+        }
+
+        function addSelectedFields() {
+            moveSelectedOptions('availableFields', 'displayedFields');
+        }
+
+        function removeSelectedFields() {
+            moveSelectedOptions('displayedFields', 'availableFields');
+        }
+
+        function moveSelectedOptions(sourceId, destinationId) {
+            const sourceSelect = document.getElementById(sourceId);
+            const destinationSelect = document.getElementById(destinationId);
+
+            for (let i = 0; i < sourceSelect.options.length; i++) {
+                const option = sourceSelect.options[i];
+
+                if (option.selected) {
+                    destinationSelect.appendChild(option);
+                    i--;  // Adjust index since removing the option
+                }
+            }
+        }
+
+        function displayData() {
+            const displayedFieldsSelect = document.getElementById('displayedFields');
+            const selectedFields = Array.from(displayedFieldsSelect.options).map(option => option.value);
+
+            if (!jsonData || !jsonData.products || selectedFields.length === 0) {
+                console.error('Invalid data or no fields selected.');
+                return;
+            }
+
+            const productArray = Object.values(jsonData.products);
+            productArray.sort((a, b) => b.popularity - a.popularity);
+
+            const tableHead = document.querySelector('#productTable thead');
+            tableHead.innerHTML = '<tr>';
+            selectedFields.forEach(field => {
+                tableHead.innerHTML += `<th>${field}</th>`;
+            });
+            tableHead.innerHTML += '</tr>';
+
+            const tableBody = document.querySelector('#productTable tbody');
+            tableBody.innerHTML = '';
+
+            productArray.forEach(product => {
+                const row = document.createElement('tr');
+                selectedFields.forEach(field => {
+                    const cell = document.createElement('td');
+                    cell.textContent = product[field];
+                    row.appendChild(cell);
+                });
+                tableBody.appendChild(row);
+            });
+        }
+    </script>
+
+</body>
+</html>
